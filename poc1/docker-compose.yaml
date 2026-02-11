@@ -1,0 +1,96 @@
+services:
+  mlflow_db:
+    image: postgres:13
+    container_name: mlflow_db
+    environment:
+      - POSTGRES_DB=mlflowdb
+      - POSTGRES_USER=mlflow
+      - POSTGRES_PASSWORD=password
+    networks:
+      - ML_Shared_Network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mlflow_s3:
+    image: minio/minio
+    container_name: mlflow_s3
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_API_CORS_ALLOW_ORIGIN=*
+    command: server /data --console-address ":9001"
+    networks:
+      ML_Shared_Network:
+        aliases:
+          - minio.local
+          - s3.local
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mlflow_server:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow_server
+    #  NO exponer puerto directamente, Nginx lo manejará
+    expose:
+      - "5000"
+    environment:
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MLFLOW_S3_ENDPOINT_URL=http://s3.local:9000
+    networks:
+      - ML_Shared_Network
+    command: >
+      mlflow server 
+      --backend-store-uri postgresql://mlflow:password@mlflow_db:5432/mlflowdb
+      --default-artifact-root s3://mlflow/
+      --host 0.0.0.0
+      --port 5000
+    depends_on:
+      mlflow_db:
+        condition: service_healthy
+      mlflow_s3:
+        condition: service_healthy
+    restart: unless-stopped
+
+ #  NGINX como proxy
+  mlflow_proxy:
+    image: nginx:alpine
+    container_name: mlflow_proxy
+    ports:
+      - "5000:5000"  # Exponemos Nginx, no MLflow directamente
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - ML_Shared_Network
+    depends_on:
+      - mlflow_server
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  ML_Shared_Network:
+    name: mlflow_network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+
+

@@ -1,0 +1,22 @@
+services:
+  api_toy:
+    build: .
+    container_name: api_mlops_test
+    ports:
+      - "8001:8000"
+    networks:
+      - ML_Shared_Network
+    environment:
+      # ✅ CAMBIO CRÍTICO: Apuntar al proxy Nginx en lugar del servidor MLflow directo
+      - MLFLOW_TRACKING_URI=http://mlflow_proxy:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://s3.local:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_DEFAULT_REGION=us-east-1
+      - MLFLOW_S3_IGNORE_TLS=true
+    
+
+networks:
+  ML_Shared_Network:
+    external: true
+    name: mlflow_network

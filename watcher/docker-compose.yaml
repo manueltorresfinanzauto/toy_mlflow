@@ -1,0 +1,18 @@
+services:
+  api_watcher:
+    build: .
+    container_name: api_watcher
+    user: root
+    restart: unless-stopped
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow_proxy:5000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ML_Shared_Network
+
+networks:
+  ML_Shared_Network:
+    external: true
+    name: mlflow_network
