@@ -1,17 +1,25 @@
 FROM python:3.9-slim
 
-# Instalamos el cliente de Docker para que el contenedor pueda ejecutar 'docker restart'
-RUN apt-get update && apt-get install -y \
+# Evitar buffering para logs en tiempo real
+ENV PYTHONUNBUFFERED=1
+
+# Instalar Docker CLI para ejecutar comandos en otros contenedores
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     docker.io \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalamos las dependencias de Python
-RUN pip install --no-cache-dir mlflow
+# Instalar dependencias Python
+RUN pip install --no-cache-dir \
+    mlflow==2.9.2 \
+    psycopg2-binary \
+    boto3
 
-# Copiamos el script al contenedor
-COPY watcher.py /app/watcher.py
-
+# Crear directorio de trabajo
 WORKDIR /app
 
-# Ejecutamos el script
+# Copiar el script
+COPY watcher.py .
+
+# Ejecutar el watcher
 CMD ["python", "watcher.py"]

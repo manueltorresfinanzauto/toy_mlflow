@@ -1,18 +1,44 @@
 services:
-  api_watcher:
-    build: .
-    container_name: api_watcher
-    user: root
+  watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.watcher
+    container_name: mlflow_watcher
     restart: unless-stopped
+    
     environment:
+      # MLflow
       - MLFLOW_TRACKING_URI=http://mlflow_proxy:5000
+      - MODEL_NAME=CarroModel
+      - ALIAS=production
+      
+      # Contenedor a reiniciar
+      - CONTAINER_TO_RESTART=api_mlops_test
+      
+      # Base de Datos PostgreSQL
+      - DB_URI=postgresql://mlflow:password@mlflow_db:5432/mlflowdb
+      
+      # MinIO/S3 Credentials (CRUCIAL para GC)
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_DEFAULT_REGION=us-east-1
+      
+      # Configuración de logs
       - PYTHONUNBUFFERED=1
+    
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      # Acceso al socket de Docker para ejecutar comandos en otros contenedores
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    
     networks:
-      - ML_Shared_Network
+      - mlflow_network
+    
+    # El watcher debe arrancar después de MLflow
+    depends_on:
+      - mlflow_proxy
 
+# Red externa que ya existe en tu stack de MLflow
 networks:
-  ML_Shared_Network:
+  mlflow_network:
     external: true
-    name: mlflow_network
