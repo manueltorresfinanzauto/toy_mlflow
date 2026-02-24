@@ -18,7 +18,7 @@ S3_DEST = "s3://mlflow/"
 # Credenciales AWS/MinIO
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "minioadmin")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "minioadmin")
-S3_ENDPOINT = os.getenv("MLFLOW_S3_ENDPOINT_URL", "http://minio:9000")
+S3_ENDPOINT = os.getenv("MLFLOW_S3_ENDPOINT_URL", "http://s3.local:9000")
 
 mlflow.set_tracking_uri(TRACKING_URI)
 client = MlflowClient()
@@ -65,9 +65,9 @@ def run_mlflow_gc():
     IMPORTANTE: Usa --older-than 0s para evitar el periodo de gracia de 30 días.
     """
     print(f"[{get_now()}] 🧹 Iniciando MLflow Garbage Collector...")
-    print(f"[{get_now()}] 📍 Target: MinIO (Liberando archivos )")
+    print(f"[{get_now()}] 📍 Target: MinIO (Liberando archivos de 8GB)")
     
-    # Comando GC con todas las variables de entorno necesarias
+    # OPCIÓN 1: Usar --backend-store-uri directamente (más confiable)
     cmd = [
         "docker", "exec",
         "-e", f"AWS_ACCESS_KEY_ID={AWS_ACCESS_KEY}",
@@ -78,7 +78,7 @@ def run_mlflow_gc():
         "mlflow", "gc",
         "--backend-store-uri", DB_URI,
         "--artifacts-destination", S3_DEST,
-        "--older-than", "0s"  # CRUCIAL: Borrar inmediatamente sin periodo de gracia
+        "--older-than", "0s"
     ]
     
     print(f"[{get_now()}] 🔧 Ejecutando comando GC...")
@@ -94,8 +94,34 @@ def run_mlflow_gc():
         else:
             print(f"[{get_now()}] ❌ ERROR en GC (código {result.returncode})")
             print(f"[{get_now()}] 📋 STDERR: {result.stderr}")
-            print(f"[{get_now()}] 📋 STDOUT: {result.stdout}")
-            return False
+            
+            # Si falla, intentar OPCIÓN 2: usando MLFLOW_TRACKING_URI
+            print(f"[{get_now()}] 🔄 Reintentando con MLFLOW_TRACKING_URI...")
+            
+            cmd_alt = [
+                "docker", "exec",
+                "-e", f"MLFLOW_TRACKING_URI={DB_URI}",  # Apuntar directamente a PostgreSQL
+                "-e", f"AWS_ACCESS_KEY_ID={AWS_ACCESS_KEY}",
+                "-e", f"AWS_SECRET_ACCESS_KEY={AWS_SECRET_KEY}",
+                "-e", f"MLFLOW_S3_ENDPOINT_URL={S3_ENDPOINT}",
+                "-e", "AWS_DEFAULT_REGION=us-east-1",
+                "mlflow_server",
+                "mlflow", "gc",
+                "--artifacts-destination", S3_DEST,
+                "--older-than", "0s"
+            ]
+            
+            result_alt = subprocess.run(cmd_alt, capture_output=True, text=True, timeout=300)
+            
+            if result_alt.returncode == 0:
+                print(f"[{get_now()}] ✨ ¡GC EXITOSO con método alternativo!")
+                if result_alt.stdout:
+                    print(f"[{get_now()}] 📋 Output GC:\n{result_alt.stdout}")
+                return True
+            else:
+                print(f"[{get_now()}] ❌ Método alternativo también falló")
+                print(f"[{get_now()}] 📋 STDERR: {result_alt.stderr}")
+                return False
             
     except subprocess.TimeoutExpired:
         print(f"[{get_now()}] ⏱️ TIMEOUT: GC tardó más de 5 minutos")

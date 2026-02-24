@@ -1,8 +1,6 @@
 services:
   watcher:
-    build:
-      context: .
-      dockerfile: Dockerfile.watcher
+    build: .
     container_name: mlflow_watcher
     restart: unless-stopped
     
@@ -34,9 +32,6 @@ services:
     networks:
       - mlflow_network
     
-    # El watcher debe arrancar después de MLflow
-    depends_on:
-      - mlflow_proxy
 
 # Red externa que ya existe en tu stack de MLflow
 networks:

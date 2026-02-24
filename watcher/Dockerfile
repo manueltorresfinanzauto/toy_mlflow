@@ -4,10 +4,7 @@ FROM python:3.9-slim
 ENV PYTHONUNBUFFERED=1
 
 # Instalar Docker CLI para ejecutar comandos en otros contenedores
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    docker.io \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
 
 # Instalar dependencias Python
 RUN pip install --no-cache-dir \
