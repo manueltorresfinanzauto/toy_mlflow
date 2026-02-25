@@ -2,10 +2,8 @@ services:
   mlflow_db:
     image: postgres:13
     container_name: mlflow_db
-    environment:
-      - POSTGRES_DB=mlflowdb
-      - POSTGRES_USER=mlflow
-      - POSTGRES_PASSWORD=password
+    env_file:
+      - .env
     networks:
       - ML_Shared_Network
     volumes:
@@ -16,15 +14,15 @@ services:
       timeout: 5s
       retries: 5
 
-  mlflow_s3:
+  mlflow-s3:
     image: minio/minio
-    container_name: mlflow_s3
+    container_name: mlflow-s3
+    env_file:
+      - .env
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
       - MINIO_API_CORS_ALLOW_ORIGIN=*
     command: server /data --console-address ":9001"
     networks:
@@ -49,10 +47,7 @@ services:
     env_file:
       - .env
     environment:
-      - MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mlflow_db:5432/${POSTGRES_DB}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:password@mlflow_db:5432/mlflowdb
     networks:
       - ML_Shared_Network
     command: >
@@ -63,7 +58,7 @@ services:
     depends_on:
       mlflow_db:
         condition: service_healthy
-      mlflow_s3:
+      mlflow-s3:
         condition: service_healthy
     restart: unless-stopped
 
@@ -81,10 +76,28 @@ services:
       - mlflow_server
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/health"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
       retries: 5
+      start_period: 10s
+
+  ml_workspace:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml 
+    container_name: ml_workspace
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow_proxy:5000
+    networks:
+      - ML_Shared_Network
+    depends_on:
+      mlflow_proxy:
+        condition: service_healthy
 
 networks:
   ML_Shared_Network:

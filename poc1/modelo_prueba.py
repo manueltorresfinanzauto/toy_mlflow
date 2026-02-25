@@ -7,6 +7,31 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pickle
 from mlflow.models.signature import infer_signature, ModelSignature
 from mlflow.types.schema import Schema, ColSpec
+import os
+import boto3
+from botocore.config import Config
+
+try:
+    s3_test = boto3.client(
+        's3',
+        endpoint_url='http://mlflow-s3:9000', # Escrito a mano aquí
+        aws_access_key_id='minioadmin',
+        aws_secret_access_key='minioadmin',
+        config=Config(signature_version='s3v4')
+    )
+    s3_test.list_buckets()
+    print("✅ Conexión manual a S3 exitosa")
+except Exception as e:
+    print(f"❌ Error en conexión manual: {e}")
+print(list(os.environ["MLFLOW_S3_ENDPOINT_URL"]))
+for var in ["MLFLOW_S3_ENDPOINT_URL", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]:
+    if var in os.environ:
+        os.environ[var] = os.environ[var].replace('\r', '').strip()
+
+mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow_proxy:5000"))
+mlflow.set_experiment("RF_poc_2")
+
+print(f"DEBUG FINAL: '{os.environ['MLFLOW_S3_ENDPOINT_URL']}'")
 
 data = load_iris()
 X_train, X_test, y_train, y_test = train_test_split(
@@ -23,9 +48,6 @@ param_grid = {
     'criterion': ['gini', 'entropy']
 }
 
-
-mlflow.set_tracking_uri("http://localhost:5000")
-mlflow.set_experiment("RF_poc")
 
 mlflow.sklearn.autolog(log_models=False)
 

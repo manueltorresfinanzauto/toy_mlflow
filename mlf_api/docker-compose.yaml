@@ -1,0 +1,22 @@
+services:
+  ml_api_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.apiml
+    container_name: ml_api_service
+    ports:
+      - "5001:5001"
+    environment:
+      # Usamos el nombre del servidor y proxy del OTRO docker compose
+      - MLFLOW_TRACKING_URI=http://mlflow_proxy:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://mlflow-s3:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MLFLOW_S3_IGNORE_TLS=true
+    networks:
+      - mlflow_network  # Se une a la red existente
+    restart: on-failure
+
+networks:
+  mlflow_network:
+    external: true  # Esto es CLAVE: le dice que use la red que ya existe

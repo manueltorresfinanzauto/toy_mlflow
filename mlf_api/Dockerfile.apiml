@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalamos dependencias básicas de MLflow y S3
+RUN pip install --no-cache-dir \
+    mlflow \
+    boto3 \
+    scikit-learn \
+    pandas
+
+# Exponemos el puerto de la API
+EXPOSE 5001
+
+# Importante: --no-conda para usar las librerías del sistema y no intentar crear entornos nuevos
+CMD ["mlflow", "models", "serve", "--model-uri", "models:/RF_test_1@production", "--port", "5001", "--host", "0.0.0.0", "--no-conda"]

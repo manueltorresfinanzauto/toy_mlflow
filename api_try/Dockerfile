@@ -1,13 +1,11 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalamos dependencias de sistema necesarias para clientes S3
-RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+# Instalamos dependencias
+RUN pip install --no-cache-dir fastapi uvicorn requests pandas scikit-learn
 
-# Instalamos las librerías de Python
-RUN pip install fastapi uvicorn mlflow scikit-learn pandas boto3
-
+# Copiamos el código
 COPY main.py .
 
 # Exponemos el puerto de FastAPI

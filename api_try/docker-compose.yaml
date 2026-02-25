@@ -1,22 +1,17 @@
 services:
-  api_toy:
+  toy_api:
     build: .
-    container_name: api_mlops_test
+    container_name: toy_api_fastapi
     ports:
-      - "8001:8000"
-    networks:
-      - ML_Shared_Network
+      - "8000:8000"
     environment:
-      # ✅ CAMBIO CRÍTICO: Apuntar al proxy Nginx en lugar del servidor MLflow directo
-      - MLFLOW_TRACKING_URI=http://mlflow_proxy:5000
-      - MLFLOW_S3_ENDPOINT_URL=http://s3.local:9000
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
-      - AWS_DEFAULT_REGION=us-east-1
-      - MLFLOW_S3_IGNORE_TLS=true
-    
+      # Nombres de los contenedores del primer compose
+      - MLFLOW_TRACKING_URL=http://mlflow_proxy:5000/api/2.0/mlflow
+      - MLFLOW_SERVE_URL=http://ml_api_service:5001/invocations
+    networks:
+      - mlflow_network
+    restart: always
 
 networks:
-  ML_Shared_Network:
+  mlflow_network:
     external: true
-    name: mlflow_network
