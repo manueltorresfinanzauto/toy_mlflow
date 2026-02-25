@@ -23,8 +23,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
       - MINIO_API_CORS_ALLOW_ORIGIN=*
     command: server /data --console-address ":9001"
     networks:
@@ -46,15 +46,17 @@ services:
     #  NO exponer puerto directamente, Nginx lo manejará
     expose:
       - "5000"
+    env_file:
+      - .env
     environment:
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
-      - MLFLOW_S3_ENDPOINT_URL=http://s3.local:9000
+      - MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mlflow_db:5432/${POSTGRES_DB}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
     networks:
       - ML_Shared_Network
     command: >
       mlflow server 
-      --backend-store-uri postgresql://mlflow:password@mlflow_db:5432/mlflowdb
       --default-artifact-root s3://mlflow/
       --host 0.0.0.0
       --port 5000

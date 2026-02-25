@@ -1,11 +1,13 @@
 import mlflow
 import pickle
 import os
+from dotenv import load_dotenv
+import os
+import pyodbc
+from urllib.parse import quote_plus
 
-# 1. Configuración de conexión (Ajusta si los nombres de tus contenedores son distintos)
-os.environ["MLFLOW_S3_ENDPOINT_URL"] = "http://localhost:9000" # MinIO
-os.environ["AWS_ACCESS_KEY_ID"] = "minioadmin"
-os.environ["AWS_SECRET_ACCESS_KEY"] = "minioadmin"
+load_dotenv()
+
 
 mlflow.set_tracking_uri("http://localhost:5000") # MLflow Server
 
