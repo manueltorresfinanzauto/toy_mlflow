@@ -44,7 +44,7 @@ mlflow.sklearn.autolog(log_models=False)
 # Definimos el espacio de búsqueda
 param_grid = {
     'n_estimators': [75, 100, 150],
-    'max_depth': [3, 5, 10, 15],
+    'max_depth': [ 6, 10, 15],
     'criterion': ['gini', 'entropy']
 }
 
