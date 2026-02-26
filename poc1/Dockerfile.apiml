@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Instalamos dependencias
+RUN pip install --no-cache-dir \
+    mlflow \
+    boto3 \
+    scikit-learn \
+    pandas
+
+# Copiamos el script de espera al contenedor
+COPY entrypoint.sh /entrypoint.sh
+
+# Damos permisos de ejecución al script
+RUN chmod +x /entrypoint.sh
+
+# Exponemos el puerto de la API
+EXPOSE 5001
+
+# Definimos el script como el punto de entrada
+# El script se encargará de ejecutar el comando final 'mlflow models serve'
+ENTRYPOINT ["/entrypoint.sh"]

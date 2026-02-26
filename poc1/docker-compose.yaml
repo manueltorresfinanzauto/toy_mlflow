@@ -4,10 +4,14 @@ services:
     container_name: mlflow_db
     env_file:
       - .env
+    ports:
+      - "5432:5432"
     networks:
       - ML_Shared_Network
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    command:
+      ["postgres", "-c", "listen_addresses=*"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mlflow"]
       interval: 10s
@@ -95,6 +99,29 @@ services:
       - MLFLOW_TRACKING_URI=http://mlflow_proxy:5000
     networks:
       - ML_Shared_Network
+    depends_on:
+      mlflow_proxy:
+        condition: service_healthy
+  
+  ml_api_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.apiml
+    container_name: ml_api_service
+    ports:
+      - "5001:5001"
+    env_file: 
+      - .env
+    environment:
+      # Reutilizamos las variables del .env para asegurar que MLflow las vea
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_IGNORE_TLS=true
+    networks:
+      - ML_Shared_Network
+    restart: on-failure
     depends_on:
       mlflow_proxy:
         condition: service_healthy

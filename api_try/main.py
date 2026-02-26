@@ -44,7 +44,7 @@ def predict():
     df_test = pd.DataFrame(iris.data, columns=iris.feature_names)
     
     # Tomamos las primeras 2 filas como ejemplo
-    sample = df_test.head(2)
+    sample = df_test.head(4)
     
     payload = {
         "dataframe_split": sample.to_dict(orient='split')
