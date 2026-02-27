@@ -113,7 +113,6 @@ services:
     env_file: 
       - .env
     environment:
-      # Reutilizamos las variables del .env para asegurar que MLflow las vea
       - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
       - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
